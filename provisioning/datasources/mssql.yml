@@ -1,0 +1,12 @@
+apiVersion: 1
+
+datasources:
+  - name: MSSQL
+    type: mssql
+    url: localhost:1433
+    user: sa
+    jsonData:
+      database: ${MSSQL_DB_NAME}
+      encrypt: 'false'
+    secureJsonData:
+      password: ${MSSQL_SA_PASSWORD}

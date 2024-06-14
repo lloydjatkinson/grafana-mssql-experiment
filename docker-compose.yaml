@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  sql-server:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: 'Y'
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      MSSQL_PID: 'Express'
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql_data:/var/opt/mssql
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${MSSQL_SA_PASSWORD} -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      retries: 10
+      start_period: 10s
+      timeout: 3s
+
+  wait-for-sql-server:
+    image: ghcr.io/flcdrg/wait-for-mssql:2.0.35
+    depends_on:
+      - sql-server
+    command: --server sql-server --username sa --password ${MSSQL_SA_PASSWORD}
+    restart: "no"
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
+      GF_PLUGIN_GRAFANA_IMAGE_RENDERER_RENDERING_IGNORE_HTTPS_ERRORS: true
+      MSSQL_DB_NAME: ${MSSQL_DB_NAME}
+    depends_on:
+      - wait-for-sql-server
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - grafana_logs:/var/log/grafana
+      - grafana_config:/etc/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+    restart: always
+
+volumes:
+  grafana_data:
+  grafana_logs:
+  grafana_config:
+  sql_data:
